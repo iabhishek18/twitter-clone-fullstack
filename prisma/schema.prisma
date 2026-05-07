@@ -1,0 +1,87 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  name      String
+  bio       String   @default("")
+  avatar    String   @default("")
+  banner    String   @default("")
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  tweets    Tweet[]
+  likes     Like[]
+  retweets  Retweet[]
+  bookmarks Bookmark[]
+  followers Follow[] @relation("following")
+  following Follow[] @relation("follower")
+  notifications Notification[] @relation("recipient")
+  sentNotifications Notification[] @relation("sender")
+}
+
+model Tweet {
+  id        String   @id @default(uuid())
+  content   String
+  imageUrl  String?
+  userId    String
+  parentId  String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    Tweet?   @relation("thread", fields: [parentId], references: [id])
+  replies   Tweet[]  @relation("thread")
+  likes     Like[]
+  retweets  Retweet[]
+  bookmarks Bookmark[]
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model Like {
+  id      String @id @default(uuid())
+  userId  String
+  tweetId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet   Tweet  @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+  @@unique([userId, tweetId])
+}
+
+model Retweet {
+  id      String @id @default(uuid())
+  userId  String
+  tweetId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet   Tweet  @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+  @@unique([userId, tweetId])
+}
+
+model Bookmark {
+  id      String @id @default(uuid())
+  userId  String
+  tweetId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tweet   Tweet  @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+  @@unique([userId, tweetId])
+}
+
+model Follow {
+  id          String @id @default(uuid())
+  followerId  String
+  followingId String
+  follower    User   @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User   @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  @@unique([followerId, followingId])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  type        String
+  recipientId String
+  senderId    String
+  tweetId     String?
+  read        Boolean  @default(false)
+  recipient   User     @relation("recipient", fields: [recipientId], references: [id])
+  sender      User     @relation("sender", fields: [senderId], references: [id])
+  createdAt   DateTime @default(now())
+}
